@@ -623,6 +623,11 @@ void InteractivePlayer::draw_map_view(MapView* given_map_view, RenderTarget* dst
 					blit_field_overlay(
 					   dst, *f, overlay->pic, overlay->hotspot, scale / overlay->scale, opacity);
 				}
+				// addidional mark for start pos
+				if (suited_as_starting_pos) {
+					// overlay is always big, put indicator next to it
+					blit_field_overlay(dst, *f, special_coords_marker_pic_, Vector2i(0, 0), scale, opacity);
+				}
 
 				// Draw port space hint if a port could be built here, but current situation doesn't
 				// allow it.
