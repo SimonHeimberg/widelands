@@ -103,6 +103,12 @@ gitAddGeneratedFiles() {
   git add data/i18n/translation_stats.conf || true
 }
 
+tx_pull() {
+  # Pull All translations from Transifex
+  # use force to make sure really all files get pulled
+  tx pull -a -f
+}
+
 undo_oneliner_diffs() {
   # Undo one-liner diffs of pure timestamps with no other content
   set +x
@@ -124,8 +130,7 @@ set -x
 # and changes from git (since last script run)
 
 # Pull All translations from Transifex
-# use force to make sure really all files get pulled
-tx pull -a -f
+tx_pull
 
 # Undo one-liner diffs of pure timestamps with no other content
 # for fetched translations (*.po) (in case something plays tricks, see #5937)
@@ -167,8 +172,7 @@ if [ -n "$(git status -s)" ]; then
   sleep 65 # wait for translation files to be updated
 
   # Pull All translations from Transifex
-  # use force to make sure really all files get pulled
-  tx pull -a -f
+  tx_pull
 
   # Undo one-liner diffs of pure timestamps with no other content
   # for fetched translations (*.po) (in case something plays tricks, see #5937)
