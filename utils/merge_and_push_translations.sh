@@ -105,20 +105,29 @@ gitAddGeneratedFiles() {
 
 tx_pull() {
   # Pull All translations from Transifex
+  [ -z "$GITHUB_ACTION" ] || echo ::group::transifex pull # group output if called from github ...
   # use force to make sure really all files get pulled
   tx pull -a -f
+  [ -z "$GITHUB_ACTION" ] || echo ::endgroup:: # ... because it generates a lot of output
 }
 
 undo_oneliner_diffs() {
   # Undo one-liner diffs of pure timestamps with no other content
   set +x
+  local github_end_undo=
   for entry in $(git diff --numstat po/ | sed -En 's/^1\t1\t//p'); do
     if [ -z "$(git diff "$entry" | grep '^[+-][^+-]' | grep -v '^[+-]"POT-Creation-Date:')" ]
     then # no other diff line remaining
+      if [ -n "$GITHUB_ACTION" ] && [ -z "$github_end_undo" ]
+      then
+        echo ::group::undo date only diff # group all this output on github
+        github_end_undo=y
+      fi
       echo "Skipping changes to $entry"
-      git checkout "$entry"
+      git checkout -- "$entry" # is silent with --
     fi
   done
+  [ -z "$github_end_undo" ] || echo ::endgroup::
   set -x
 }
 
@@ -168,7 +177,9 @@ undo_oneliner_diffs
 if [ -n "$(git status -s)" ]; then
   # Only upload to Transifex if anything changed
   # Push source catalogs to Transifex
+  [ -z "$GITHUB_ACTION" ] || echo ::group::transifex push
   tx push -s
+  [ -z "$GITHUB_ACTION" ] || echo ::endgroup::
   sleep 65 # wait for translation files to be updated
 
   # Pull All translations from Transifex
