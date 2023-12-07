@@ -16,6 +16,7 @@ jobs:
     outputs:
       codecheck: ${{ steps.changed_files.outputs.codecheck }}
       clang_tidy: ${{ steps.changed_files.outputs.clang_tidy }}
+      run_test_suite_appchanged: ${{ steps.changed_files.outputs.test_suite_appchanged }}
       run_test_suite: ${{ steps.changed_files.outputs.test_suite }}
       inst_windows_msvc: ${{ steps.changed_files.outputs.inst_windows_msvc }}
       inst_windows: ${{ steps.changed_files.outputs.inst_windows }}
@@ -48,8 +49,11 @@ jobs:
             - 'utils/run-clang-tidy.py'
             - '.github/scripts/install_deps.sh' # calls install-dependencies.sh
             - '.github/workflows/build_clang_tidy.yaml'
-          test_suite:
+          test_suite_appchanged:
             - *src_cmake_dependencies
+            - '.github/scripts/install_deps.sh' # calls install-dependencies.sh
+            - '.github/workflows/build_testsuite.yaml'
+          test_suite:
             # ignore some subdirectories
             - 'data/!(campaigns|maps|music|sound|tribes|world)/**'
             # but track parts of them
@@ -60,8 +64,6 @@ jobs:
             - 'data/*' # do not ignore files directly inside
             - 'regression_test.py'
             - 'test/**'
-            - '.github/scripts/install_deps.sh' # calls install-dependencies.sh
-            - '.github/workflows/build_testsuite.yaml'
           inst_windows_msvc:
             - &installer
               - *src_cmake_dependencies
@@ -155,8 +157,12 @@ jobs:
 
   testsuite:
     needs: [changes, clang_tidy, documentation, codecheck, misc_sanity_checks, lua_style]
-    if: needs.changes.outputs.run_test_suite == 'true'
+    if: >
+      needs.changes.outputs.run_test_suite == 'true' ||
+      needs.changes.outputs.run_test_suite_appchanged == 'true'
     uses: ./.github/workflows/build_testsuite.yaml
+    #with:
+    #  app_changed: ${{ needs.changes.outputs.run_test_suite_appchanged == 'true' }}
 
   windows-msvc:
     needs: [changes, clang_tidy, documentation, codecheck, misc_sanity_checks, lua_style]
