@@ -1,6 +1,11 @@
 name: build - testsuite
 on:
   workflow_call:
+    inputs:
+      app_changed:
+        description: true if the application has changed (the cpp source or ...)
+        type: boolean
+        required: true
 
 jobs:
   testsuite:
