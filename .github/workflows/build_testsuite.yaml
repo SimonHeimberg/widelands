@@ -6,42 +6,84 @@ on:
         description: true if the application has changed (the cpp source or ...)
         type: boolean
         required: true
+      matrix_full_tests:
+        # This is here because strategy.matrix can only access a few elements and this is the only
+        # useful place (except of passing it as input from another job)
+        description: CONST, full test matrix
+        type: string
+        # unfortunately must be written as json because yaml can not be loaded from string
+        required: false
+        # We test the two newest and the two oldest versions of each of the two compilers
+        # Some compilers need an older ubuntu version to run correctly, they are listed in include
+        default: |
+          {
+            {
+              "config": [
+                "Debug",
+                "Release"
+              ],
+              "os": [
+                "ubuntu-22.04"
+              ],
+              "compiler": [
+                "clang-15",
+                "clang-14",
+                "g++-12",
+                "g++-11"
+              ],
+              "include": [
+                {
+                  "compiler": "g++-7",
+                  "os": "ubuntu-20.04",
+                  "config": "Debug"
+                },
+                {
+                  "compiler": "g++-7",
+                  "os": "ubuntu-20.04",
+                  "config": "Release"
+                },
+                {
+                  "compiler": "g++-8",
+                  "os": "ubuntu-20.04",
+                  "config": "Debug"
+                },
+                {
+                  "compiler": "g++-8",
+                  "os": "ubuntu-20.04",
+                  "config": "Release"
+                },
+                {
+                  "compiler": "clang-8",
+                  "os": "ubuntu-20.04",
+                  "config": "Debug"
+                },
+                {
+                  "compiler": "clang-8",
+                  "os": "ubuntu-20.04",
+                  "config": "Release"
+                },
+                {
+                  "compiler": "clang-7",
+                  "os": "ubuntu-20.04",
+                  "config": "Debug"
+                },
+                {
+                  "compiler": "clang-7",
+                  "os": "ubuntu-20.04",
+                  "config": "Release"
+                }
+              ]
+            }
+          }
 
 jobs:
   testsuite:
     strategy:
       fail-fast: false
-      matrix:
-        # We test the two newest and the two oldest versions of each of the two compilers
-        config: [Debug, Release]
-        os: [ubuntu-22.04]
-        compiler: [clang-15, clang-14, g++-12, g++-11]
-        include:
-          # Some compilers need an older ubuntu version to run correctly
-          - compiler: g++-7
-            os: ubuntu-20.04
-            config: Debug
-          - compiler: g++-7
-            os: ubuntu-20.04
-            config: Release
-          - compiler: g++-8
-            os: ubuntu-20.04
-            config: Debug
-          - compiler: g++-8
-            os: ubuntu-20.04
-            config: Release
-          - compiler: clang-8
-            os: ubuntu-20.04
-            config: Debug
-          - compiler: clang-8
-            os: ubuntu-20.04
-            config: Release
-          - compiler: clang-7
-            os: ubuntu-20.04
-            config: Debug
-          - compiler: clang-7
-            os: ubuntu-20.04
-            config: Release
+      # TODO(aDiscoverer or ...) set something useful for a partial test run
+      matrix: |
+        ${{ fromJson( inputs.app_changed && inputs.matrix_full_tests ||
+                                            inputs.matrix_full_tests ) }}
     runs-on: ${{ matrix.os }}
     env:
       SDL_VIDEODRIVER: 'x11'
