@@ -200,6 +200,12 @@ jobs:
         contains(needs.*.result, 'cancelled')
       run: |
         echo "A job failed or was cancelled!"
+        echo '${{ toJSON(needs) }}' | jq -r '# show which jobs
+          "## failed:",
+          (to_entries | .[] | select(.value.result == "failed") | .key),
+          "## cancelled:",
+          (to_entries | .[] | select(.value.result == "cancelled") | .key)
+        '
         exit 1
     - name: No step skipped  # Optional, just gives info
       if: "! contains(needs.*.result, 'skipped')"
