@@ -9,6 +9,85 @@ on:
     branches: [ master ]
 
 jobs:
+  changes:
+    name: changed files
+    runs-on: ubuntu-latest
+    # Set job outputs to values from changed_files step for other jobs
+    outputs:
+      codecheck: ${{ steps.changed_files.outputs.codecheck }}
+      clang_tidy: ${{ steps.changed_files.outputs.clang_tidy }}
+      run_test_suite_appchanged: ${{ steps.changed_files.outputs.test_suite_appchanged }}
+      run_test_suite: ${{ steps.changed_files.outputs.test_suite }}
+      inst_windows_msvc: ${{ steps.changed_files.outputs.inst_windows_msvc }}
+      inst_windows: ${{ steps.changed_files.outputs.inst_windows }}
+      inst_macos: ${{ steps.changed_files.outputs.inst_macos }}
+      appimage: ${{ steps.changed_files.outputs.appimage }}
+    steps:
+    - name: Check for changed files
+      uses: dorny/paths-filter@v2
+      id: changed_files
+      with:
+        # groups to check for changed files (as string, yaml anchors are resolved by the tool)
+        filters: |
+          codecheck:
+            - 'CMakeLists.txt'
+            - '*/CMakeLists.txt'
+            - 'cmake/codecheck/**'
+            - 'cmake/WlFunctions.cmake'
+            - 'src/**'
+            - '.github/scripts/install_deps.sh' # calls install-dependencies.sh
+            - '.github/workflows/build_codecheck.yaml'
+          clang_tidy:
+            - &src_cmake_dependencies
+              - 'CMakeLists.txt'
+              - 'cmake/**'
+              - 'src/**'
+                # dependencies:
+              - 'install-dependencies.sh' # called by xx.yaml or ./.github/scripts/install_deps.sh
+              - 'utils/download_asio.sh' # called by install-dependencies.sh
+            - 'utils/check_clang_tidy_results.py'
+            - 'utils/run-clang-tidy.py'
+            - '.github/scripts/install_deps.sh' # calls install-dependencies.sh
+            - '.github/workflows/build_clang_tidy.yaml'
+          test_suite_appchanged:
+            - *src_cmake_dependencies
+            - '.github/scripts/install_deps.sh' # calls install-dependencies.sh
+            - '.github/workflows/build_testsuite.yaml'
+          test_suite:
+            # ignore some subdirectories
+            - 'data/!(campaigns|maps|music|sound|tribes|world)/**'
+            # but track parts of them
+            - 'data/tribes/**.lua' # track lua files
+            - 'data/world/**.lua'
+            - added|deleted: 'data/tribes/**' # do not care about image modifications
+            - added|deleted: 'data/world/**' # dito
+            - 'data/*' # do not ignore files directly inside
+            - 'regression_test.py'
+            - 'test/**'
+          inst_windows_msvc:
+            - &installer
+              - *src_cmake_dependencies
+              - 'data/**'
+              - 'po/**'
+            # doc/** maybe for some installers TODO(unknown)
+            - 'utils/win32/**'
+            - '.github/scripts/vcpkg_ref'
+            - '.github/workflows/build_windows_msvc.yaml' # calls install-dependencies.sh
+          inst_windows:
+            - *installer
+            - 'utils/win32/**'
+            - '.github/workflows/build_windows.yaml' # calls install-dependencies.sh
+          inst_macos:
+            - *installer
+            - 'compile.sh' # called by utils/macos/build_app.sh, calls install-dependencies.sh
+            - 'utils/macos/*'
+            - '.github/workflows/build_macos.yaml' # calls install-dependencies.sh
+          appimage:
+            - *installer
+            - 'xdg/org.widelands.Widelands.*'
+            - '.github/scripts/install_deps.sh' # calls install-dependencies.sh
+            - '.github/workflows/build_appimage.yaml'
+
   # This job runs multiple smaller checks where having several jobs would be overkill.
   misc_sanity_checks:
     runs-on: ubuntu-latest
@@ -33,48 +112,9 @@ jobs:
         popd
 
   codecheck:
-    runs-on: ubuntu-latest
-    steps:
-    - name: Checkout
-      uses: actions/checkout@v3
-      with:
-        fetch-depth: 1
-    - name: Check for changed files
-      uses: dorny/paths-filter@v2
-      id: changed_files
-      with:
-        # groups to check for changed files
-        filters: |
-          codecheck:
-            - 'CMakeLists.txt'
-            - '*/CMakeLists.txt'
-            - 'cmake/codecheck/**'
-            - 'cmake/WlFunctions.cmake'
-            - 'src/**'
-    - name: Installing dependencies
-      if: steps.changed_files.outputs.codecheck == 'true'
-      run: sh ./.github/scripts/install_deps.sh
-    - name: Test
-      if: steps.changed_files.outputs.codecheck == 'true'
-      run: |
-        ./cmake/codecheck/run_tests.py
-    - name: Check
-      if: steps.changed_files.outputs.codecheck == 'true'
-      run: |
-        mkdir build
-        cd build
-        cmake .. -DCMAKE_BUILD_TYPE:STRING="Debug"
-        TERM=dumb make -j1 codecheck 2>&1 | tee codecheck.out
-    - name: Report
-      if: steps.changed_files.outputs.codecheck == 'true'
-      run: |
-        if grep '^[/_.a-zA-Z]\+:[0-9]\+:' build/codecheck.out; then
-          echo "You have codecheck warnings (see above). Please fix."
-          exit 1
-        else
-          echo "Codecheck is clear :)"
-          exit 0
-        fi
+    needs: [changes]
+    if: needs.changes.outputs.codecheck == 'true'
+    uses: ./.github/workflows/build_codecheck.yaml
 
   documentation:
     runs-on: ubuntu-latest
@@ -96,71 +136,9 @@ jobs:
         sphinx-build -W -b json -d build/doctrees source build/json
 
   clang_tidy:
-    runs-on: ubuntu-latest
-    # Set job outputs to values from changed_files step for other jobs
-    outputs:
-      run_test_suite: ${{ steps.changed_files.outputs.test_suite }}
-      create_installer: ${{ steps.changed_files.outputs.installer }}
-      inst_windows_msvc: ${{ steps.changed_files.outputs.inst_windows_msvc }}
-      inst_windows: ${{ steps.changed_files.outputs.inst_windows }}
-      inst_macos: ${{ steps.changed_files.outputs.inst_macos }}
-      appimage: ${{ steps.changed_files.outputs.appimage }}
-    env:
-      CC:  /usr/bin/clang
-      CXX: /usr/bin/clang++
-    steps:
-    - name: Checkout
-      uses: actions/checkout@v3
-      with:
-        fetch-depth: 1
-    - name: Check for changed files
-      uses: dorny/paths-filter@v2
-      id: changed_files
-      with:
-        # groups to check for changed files (as string, yaml anchors are resolved by the tool)
-        filters: |
-          clang_tidy:
-            - 'src/**'
-            - 'utils/check_clang_tidy_results.py'
-            - 'utils/run-clang-tidy.py'
-          compile: &compile
-            - 'CMakeLists.txt'
-            - 'cmake/**'
-            - 'src/**'
-          test_suite:
-            - *compile
-            - 'data/**'
-            - 'regression_test.py'
-            - 'test/**'
-            - '.github/workflows/build_testsuite.yaml'
-          installer:
-            - *compile
-            - 'data/**'
-            - 'doc/**'
-            - 'po/**'
-          install_dependencies: &install_dependencies
-            - 'install-dependencies.sh'
-            - 'utils/download_asio.sh' # called by install-dependencies.sh
-          inst_windows_msvc:
-            - *install_dependencies
-            - 'utils/win32/**'
-            - '.github/scripts/vcpkg_ref'
-            - '.github/workflows/build_windows_msvc.yaml'
-          inst_windows:
-            - *install_dependencies
-            - 'utils/win32/**'
-            - '.github/workflows/build_windows.yaml'
-          inst_macos:
-            - 'compile.sh' # called by utils/macos/build_app.sh
-            - *install_dependencies
-            - 'utils/macos/*'
-            - '.github/workflows/build_macos.yaml'
-          appimage:
-            - 'xdg/org.widelands.Widelands.*'
-            - '.github/workflows/build_appimage.yaml'
-    - name: Clang-tidy steps
-      if: steps.changed_files.outputs.clang_tidy == 'true'
-      uses: ./.github/actions/build_clang_tidy.yml
+    needs: [changes]
+    if: needs.changes.outputs.clang_tidy == 'true'
+    uses: ./.github/workflows/build_clang_tidy.yaml
 
   lua_style:
     runs-on: ubuntu-latest
@@ -178,37 +156,34 @@ jobs:
       run: ./utils/lua_style_checker.py
 
   testsuite:
-    needs: [clang_tidy, documentation, codecheck, misc_sanity_checks, lua_style]
-    if: needs.clang_tidy.outputs.run_test_suite == 'true'
+    needs: [changes, clang_tidy, documentation, codecheck, misc_sanity_checks, lua_style]
+    if: >
+      needs.changes.outputs.run_test_suite == 'true' ||
+      needs.changes.outputs.run_test_suite_appchanged == 'true'
     uses: ./.github/workflows/build_testsuite.yaml
+    with:
+      app_changed: ${{ needs.changes.outputs.run_test_suite_appchanged == 'true' }}
 
   windows-msvc:
-    needs: [clang_tidy, documentation, codecheck, misc_sanity_checks, lua_style]
-    if: >
-      needs.clang_tidy.outputs.create_installer == 'true' ||
-      needs.clang_tidy.outputs.inst_windows_msvc == 'true'
+    needs: [changes, clang_tidy, documentation, codecheck, misc_sanity_checks, lua_style]
+    if: needs.changes.outputs.inst_windows_msvc == 'true'
     uses: ./.github/workflows/build_windows_msvc.yaml
 
   windows:
-    needs: [clang_tidy, documentation, codecheck, misc_sanity_checks, lua_style]
-    if: >
-      needs.clang_tidy.outputs.create_installer == 'true' ||
-      needs.clang_tidy.outputs.inst_windows == 'true'
+    needs: [changes, clang_tidy, documentation, codecheck, misc_sanity_checks, lua_style]
+    if: needs.changes.outputs.inst_windows == 'true'
     uses: ./.github/workflows/build_windows.yaml
 
   macos:
-    needs: [clang_tidy, documentation, codecheck, misc_sanity_checks, lua_style]
-    if: >
-      needs.clang_tidy.outputs.create_installer == 'true' ||
-      needs.clang_tidy.outputs.inst_macos == 'true'
+    needs: [changes, clang_tidy, documentation, codecheck, misc_sanity_checks, lua_style]
+    if: needs.changes.outputs.inst_macos == 'true'
     uses: ./.github/workflows/build_macos.yaml
 
   appimage:
     if: >
       github.repository == 'widelands/widelands' && github.ref == 'refs/heads/master' &&
-      ( needs.clang_tidy.outputs.create_installer == 'true' ||
-        needs.clang_tidy.outputs.appimage == 'true' )
-    needs: [clang_tidy, documentation, codecheck, misc_sanity_checks, lua_style]
+      needs.changes.outputs.appimage == 'true'
+    needs: [changes, clang_tidy, documentation, codecheck, misc_sanity_checks, lua_style]
     uses: ./.github/workflows/build_appimage.yaml
 
   # Dummy check for PRs that all required status checks have either passed or were skipped
@@ -225,6 +200,12 @@ jobs:
         contains(needs.*.result, 'cancelled')
       run: |
         echo "A job failed or was cancelled!"
+        echo '${{ toJSON(needs) }}' | jq -r '# show which jobs
+          "## failed:",
+          (to_entries | .[] | select(.value.result == "failure") | .key),
+          "## cancelled:",
+          (to_entries | .[] | select(.value.result == "cancelled") | .key)
+        '
         exit 1
     - name: No step skipped  # Optional, just gives info
       if: "! contains(needs.*.result, 'skipped')"

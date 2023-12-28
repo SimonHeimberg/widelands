@@ -1,42 +1,168 @@
 name: build - testsuite
 on:
   workflow_call:
+    inputs:
+      app_changed:
+        description: true if the application has changed (the cpp source or ...)
+        type: boolean
+        required: true
+      # The following elements are here because strategy.matrix can only access a few elements and
+      # this is the only useful place (except of passing it as real input from another job).
+      # The values must be written as json because yaml can not be loaded from string
+      matrix_full_tests_config:
+        description: CONST, config list of matrix for full tests
+        type: string
+        required: false
+        # TODO(aDiscoverer) indent values properly
+        default: |
+          [
+                "Debug",
+                "Release"
+          ]
+      matrix_full_tests_os:
+        description: CONST, os list of matrix for full tests
+        type: string
+        required: false
+        default: |
+          [
+                "ubuntu-22.04"
+          ]
+      matrix_full_tests_compiler:
+        description: CONST, compiler list of matrix for full tests
+        type: string
+        required: false
+        # We test the two newest and the two oldest versions of each of the two compilers
+        # Some compilers need an older ubuntu version to run correctly, they are listed in include
+        default: |
+          [
+                "clang-15",
+                "clang-14",
+                "g++-12",
+                "g++-11"
+          ]
+      matrix_full_tests_include:
+        description: CONST, include list of matrix for full tests
+        type: string
+        required: false
+        # Some compilers need an older ubuntu version to run correctly, they are listed here
+        default: |
+          [
+                {
+                  "compiler": "g++-7",
+                  "os": "ubuntu-20.04",
+                  "config": "Debug"
+                },
+                {
+                  "compiler": "g++-7",
+                  "os": "ubuntu-20.04",
+                  "config": "Release"
+                },
+                {
+                  "compiler": "g++-8",
+                  "os": "ubuntu-20.04",
+                  "config": "Debug"
+                },
+                {
+                  "compiler": "g++-8",
+                  "os": "ubuntu-20.04",
+                  "config": "Release"
+                },
+                {
+                  "compiler": "clang-8",
+                  "os": "ubuntu-20.04",
+                  "config": "Debug"
+                },
+                {
+                  "compiler": "clang-8",
+                  "os": "ubuntu-20.04",
+                  "config": "Release"
+                },
+                {
+                  "compiler": "clang-7",
+                  "os": "ubuntu-20.04",
+                  "config": "Debug"
+                },
+                {
+                  "compiler": "clang-7",
+                  "os": "ubuntu-20.04",
+                  "config": "Release"
+                }
+          ]
+      matrix_reduced_tests_include:
+        description: CONST, include list of matrix for reduced tests
+        type: string
+        required: false
+        # this is a selection from from the full test run
+        default: |
+          [
+            {
+              "compiler": "g++-12",
+              "os": "ubuntu-22.04",
+              "config": "Debug"
+            }
+          ]
+
 
 jobs:
+  dbg_json:
+    runs-on: ubuntu-latest
+    steps:
+      - name: as string
+        env:
+          full_tests_config: ${{ inputs.matrix_full_tests_config }}
+          full_tests_os: ${{ inputs.matrix_full_tests_os }}
+          full_tests_compiler: ${{  inputs.matrix_full_tests_compiler }}
+          full_tests_include: ${{ inputs.matrix_full_tests_include }}
+          reduced_tests_include: ${{ inputs.matrix_reduced_tests_include }}
+          tests_os_for: ${{ ! inputs.app_changed && inputs.matrix_full_tests_os || '[]' }}
+        run: |
+          echo full_tests_config: "$full_tests_config"
+          echo
+          echo full_tests_os: "$full_tests_os"
+          echo
+          echo full_tests_compiler: "$full_tests_compiler"
+          echo
+          echo full_tests_include: "$full_tests_include"
+          echo
+          echo reduced_tests_include: "$reduced_tests_include"
+          echo
+          echo ----------
+          echo
+          echo tests_os_for_when_reduced: "$tests_os_for"
+      - name: inputs as json
+        env:
+          inputs: ${{ toJSON(inputs) }}
+        run: |
+          echo "$inputs"
+      - name: try fromJSON
+        run: |
+          echo full_tests_config: '${{ fromJSON(inputs.matrix_full_tests_config) }}'
+          echo
+          echo full_tests_os: '${{ fromJSON(inputs.matrix_full_tests_os) }}'
+          echo
+          echo full_tests_compiler: '${{ fromJSON(inputs.matrix_full_tests_compiler) }}'
+          echo
+          echo full_tests_include: '${{ fromJSON(inputs.matrix_full_tests_include) }}'
+          echo
+          echo reduced_tests_include: '${{ fromJSON(inputs.matrix_reduced_tests_include) }}'
+
   testsuite:
     strategy:
       fail-fast: false
       matrix:
-        # We test the two newest and the two oldest versions of each of the two compilers
-        config: [Debug, Release]
-        os: [ubuntu-22.04]
-        compiler: [clang-15, clang-14, g++-12, g++-11]
+        config:
+          ${{ fromJson( inputs.app_changed && inputs.matrix_full_tests_config ||
+                                              '[]' ) }}
+        os:
+          ${{ fromJson( inputs.app_changed && inputs.matrix_full_tests_os ||
+                                              '[]' ) }}
+        compiler:
+          ${{ fromJson( inputs.app_changed && inputs.matrix_full_tests_compiler ||
+                                              '[]' ) }}
+        # additional combinations:
         include:
-          # Some compilers need an older ubuntu version to run correctly
-          - compiler: g++-7
-            os: ubuntu-20.04
-            config: Debug
-          - compiler: g++-7
-            os: ubuntu-20.04
-            config: Release
-          - compiler: g++-8
-            os: ubuntu-20.04
-            config: Debug
-          - compiler: g++-8
-            os: ubuntu-20.04
-            config: Release
-          - compiler: clang-8
-            os: ubuntu-20.04
-            config: Debug
-          - compiler: clang-8
-            os: ubuntu-20.04
-            config: Release
-          - compiler: clang-7
-            os: ubuntu-20.04
-            config: Debug
-          - compiler: clang-7
-            os: ubuntu-20.04
-            config: Release
+          ${{ fromJson( inputs.app_changed && inputs.matrix_full_tests_include ||
+                                              inputs.matrix_reduced_tests_include ) }}
     runs-on: ${{ matrix.os }}
     env:
       SDL_VIDEODRIVER: 'x11'
