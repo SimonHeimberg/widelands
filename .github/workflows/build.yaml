@@ -202,7 +202,7 @@ jobs:
         echo "A job failed or was cancelled!"
         echo '${{ toJSON(needs) }}' | jq -r '# show which jobs
           "## failed:",
-          (to_entries | .[] | select(.value.result == "failed") | .key),
+          (to_entries | .[] | select(.value.result == "failure") | .key),
           "## cancelled:",
           (to_entries | .[] | select(.value.result == "cancelled") | .key)
         '
