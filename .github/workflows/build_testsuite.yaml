@@ -109,18 +109,42 @@ jobs:
     steps:
       - name: as string
         env:
-          full_tests_config: ${{ inputs.app_changed && inputs.matrix_full_tests_config }}
-          full_tests_os: ${{ inputs.app_changed && inputs.matrix_full_tests_os }}
-          full_tests_compiler: ${{ inputs.app_changed && inputs.matrix_full_tests_compiler }}
-          full_tests_include: ${{ inputs.app_changed && inputs.matrix_full_tests_include }}
+          full_tests_config: ${{ inputs.matrix_full_tests_config }}
+          full_tests_os: ${{ inputs.matrix_full_tests_os }}
+          full_tests_compiler: ${{  inputs.matrix_full_tests_compiler }}
+          full_tests_include: ${{ inputs.matrix_full_tests_include }}
           reduced_tests_include: ${{ inputs.matrix_reduced_tests_include }}
+          tests_os_for: ${{ ! inputs.app_changed && inputs.matrix_full_tests_os || '[]' }}
         run: |
-          env | grep -e _tests_
+          echo full_tests_config: "$full_tests_config"
+          echo
+          echo full_tests_os: "$full_tests_os"
+          echo
+          echo full_tests_compiler: "$full_tests_compiler"
+          echo
+          echo full_tests_include: "$full_tests_include"
+          echo
+          echo reduced_tests_include: "$reduced_tests_include"
+          echo
+          echo ----------
+          echo
+          echo tests_os_for_when_reduced: "$tests_os_for"
       - name: inputs as json
         env:
           inputs: ${{ toJSON(inputs) }}
         run: |
           echo "$inputs"
+      - name: try fromJSON
+        run: |
+          echo full_tests_config: '${{ fromJSON(inputs.matrix_full_tests_config) }}'
+          echo
+          echo full_tests_os: '${{ fromJSON(inputs.matrix_full_tests_os) }}'
+          echo
+          echo full_tests_compiler: '${{ fromJSON(inputs.matrix_full_tests_compiler) }}'
+          echo
+          echo full_tests_include: '${{ fromJSON(inputs.matrix_full_tests_include) }}'
+          echo
+          echo reduced_tests_include: '${{ fromJSON(inputs.matrix_reduced_tests_include) }}'
 
   testsuite:
     strategy:
