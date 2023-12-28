@@ -150,16 +150,17 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        config: |
+        config:
           ${{ fromJson( inputs.app_changed && inputs.matrix_full_tests_config ||
                                               '[]' ) }}
-        os: |
+        os:
           ${{ fromJson( inputs.app_changed && inputs.matrix_full_tests_os ||
                                               '[]' ) }}
-        compiler: |
+        compiler:
           ${{ fromJson( inputs.app_changed && inputs.matrix_full_tests_compiler ||
                                               '[]' ) }}
-        include: | # additional combinations
+        # additional combinations:
+        include:
           ${{ fromJson( inputs.app_changed && inputs.matrix_full_tests_include ||
                                               inputs.matrix_reduced_tests_include ) }}
     runs-on: ${{ matrix.os }}
