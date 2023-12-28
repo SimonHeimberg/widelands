@@ -105,6 +105,7 @@ on:
 
 jobs:
   dbg_json:
+    runs-on: ubuntu-latest
     steps:
       - name: as string
         env:
