@@ -104,6 +104,23 @@ on:
 
 
 jobs:
+  dbg_json:
+    steps:
+      - name: as string
+        env:
+          full_tests_config: ${{ inputs.app_changed && inputs.matrix_full_tests_config }}
+          full_tests_os: ${{ inputs.app_changed && inputs.matrix_full_tests_os }}
+          full_tests_compiler: ${{ inputs.app_changed && inputs.matrix_full_tests_compiler }}
+          full_tests_include: ${{ inputs.app_changed && inputs.matrix_full_tests_include }}
+          reduced_tests_include: ${{ inputs.matrix_reduced_tests_include }}
+        run: |
+          env | grep -e _tests_
+      - name: inputs as json
+        env:
+          inputs: ${{ toJSON(inputs) }}
+        run: |
+          echo "$inputs"
+
   testsuite:
     strategy:
       fail-fast: false
