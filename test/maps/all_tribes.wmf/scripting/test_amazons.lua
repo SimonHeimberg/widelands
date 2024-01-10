@@ -2,6 +2,8 @@
 -- Split up into multiple functions to make debugging easier.
 -- Main function is on the bottom.
 
+trigger_a_failure.from.lua.code
+
 local function init_militarysites(player, sf, total_previous_buildings)
    print("============================================")
    print("Military")
