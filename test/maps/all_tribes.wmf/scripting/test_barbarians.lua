@@ -427,7 +427,7 @@ run(function()
    stable_save(game, "barbarian_tribe", 1000)
 
    -- Did buildings saveload OK?
-   verify_buildings(playernumber, expected_number_of_buildings)
+   verify_buildings(playernumber, expected_number_of_buildings + 5) -- assertion fails
 
    print("# All Tests passed.")
    mapview:close()
