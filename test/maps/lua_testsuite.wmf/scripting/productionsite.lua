@@ -37,7 +37,7 @@ function productionsite_tests:teardown()
 end
 function productionsite_tests:test_name()
    assert_equal("barbarians_big_inn", self.inn.descr.name)
-   assert_equal("barbarians_warmill", self.warmill.descr.name)
+   assert_equal("barbarians_warmill FAIL", self.warmill.descr.name)
    assert_equal("barbarians_lumberjacks_hut", self.lumberjack.descr.name)
 end
 function productionsite_tests:test_type()

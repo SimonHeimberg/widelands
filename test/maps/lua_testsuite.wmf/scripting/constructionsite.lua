@@ -28,7 +28,7 @@ end
 
 function constructionsite_tests:test_name()
    assert_equal("constructionsite", self.l.descr.name)
-   assert_equal("constructionsite", self.f.descr.name)
+   assert_equal("constructionsite FAIL", self.f.descr.name)
 end
 function constructionsite_tests:test_type()
    assert_equal("constructionsite", self.l.descr.type_name)
