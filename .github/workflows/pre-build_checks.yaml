@@ -44,6 +44,10 @@ jobs:
   documentation:
     runs-on: ubuntu-latest
     steps:
+    - name: monitor permissions
+      uses: GitHubSecurityLab/actions-permissions/monitor@v1
+      with:
+        config: '{"create_artifacts": false}'
     - name: Checkout
       uses: actions/checkout@v3
       with:
@@ -63,6 +67,10 @@ jobs:
   lua_style:
     runs-on: ubuntu-latest
     steps:
+    - name: monitor permissions
+      uses: GitHubSecurityLab/actions-permissions/monitor@v1
+      with:
+        config: '{"create_artifacts": false}'
     - name: Checkout
       uses: actions/checkout@v3
       with:
@@ -74,4 +82,3 @@ jobs:
         popd
     - name: Run Lua style checker
       run: ./utils/lua_style_checker.py
-
