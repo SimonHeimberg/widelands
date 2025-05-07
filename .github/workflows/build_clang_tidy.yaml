@@ -9,6 +9,10 @@ jobs:
       CC:  /usr/bin/clang
       CXX: /usr/bin/clang++
     steps:
+    - name: monitor permissions
+      uses: GitHubSecurityLab/actions-permissions/monitor@v1
+      with:
+        config: '{"create_artifacts": false}'
     - name: Checkout
       uses: actions/checkout@v4
       with:

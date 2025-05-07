@@ -24,6 +24,10 @@ jobs:
     # ${{ matrix.compiler }}
     runs-on: macos-${{ matrix.os }}
     steps:
+    - name: monitor permissions
+      uses: GitHubSecurityLab/actions-permissions/monitor@v1
+      with:
+        config: '{"create_artifacts": false}'
     - name: Checkout
       uses: actions/checkout@v4
       with:
