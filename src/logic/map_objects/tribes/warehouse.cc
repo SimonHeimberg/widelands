@@ -335,8 +335,9 @@ Warehouse Building
  */
 WarehouseDescr::WarehouseDescr(const std::string& init_descname,
                                const LuaTable& table,
+                               const std::vector<std::string>& attribs,
                                Descriptions& descriptions)
-   : BuildingDescr(init_descname, MapObjectType::WAREHOUSE, table, descriptions) {
+   : BuildingDescr(init_descname, MapObjectType::WAREHOUSE, table, attribs, descriptions) {
 	heal_per_second_ = table.get_int("heal_per_second");
 
 	if (table.has_key("conquers")) {
@@ -768,6 +769,7 @@ void Warehouse::cleanup(EditorGameBase& egbase) {
 	// This will launch all workers including incorporated ones up to kFleeingUnitsCap and then empty
 	// the stock.
 	if (upcast(Game, game, &egbase)) {
+		set_desired_soldier_count(0);  // allow garrisoned soldiers to flee
 		const WareList& workers = get_workers();
 		for (DescriptionIndex id = 0; id < workers.get_nrwareids(); ++id) {
 			// If the game is running, have the workers flee the warehouse.
@@ -1178,7 +1180,8 @@ Soldier& Warehouse::launch_soldier(Game& game,
 	}
 
 	if (i == end) {
-		throw wexception("Warehouse::launch_soldier: no stored soldier met the requirements");
+		throw wexception("Warehouse::launch_soldier: no stored soldier met the requirements at %s",
+		                 warehouse_name_.c_str());
 	}
 
 	Soldier* soldier = incorporated_soldiers_.at(i).get(game);
