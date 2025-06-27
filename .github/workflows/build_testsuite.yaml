@@ -48,6 +48,10 @@ jobs:
       LSAN_OPTIONS: 'suppressions=${{ github.workspace }}/asan_3rd_party_leaks'
       CXX: '${{ matrix.compiler }}'
     steps:
+    - name: monitor permissions
+      uses: GitHubSecurityLab/actions-permissions/monitor@v1
+      with:
+        config: '{"create_artifacts": false}'
     - name: Checkout
       uses: actions/checkout@v4
       with:

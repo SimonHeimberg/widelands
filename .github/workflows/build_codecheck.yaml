@@ -6,6 +6,10 @@ jobs:
   codecheck:
     runs-on: ubuntu-latest
     steps:
+    - name: monitor permissions
+      uses: GitHubSecurityLab/actions-permissions/monitor@v1
+      with:
+        config: '{"create_artifacts": false, "debug": true}'
     - name: Checkout
       uses: actions/checkout@v4
       with:
