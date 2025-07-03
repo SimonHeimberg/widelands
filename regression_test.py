@@ -70,6 +70,8 @@ def colorize_log(text):
 
 
 class GithubASan:
+    test_script = None
+
     @classmethod
     def github_asan_line(cls, text):
         "annotates asan summary on GitHub and writes more info to the steps summary file"
@@ -84,6 +86,7 @@ class GithubASan:
 
         if 'ERROR: ' in text and os.getenv('GITHUB_STEP_SUMMARY'):
             write_summary('### ', text)  # this text is colored
+            write_summary('triggered by test ', cls.test_script, '\n\n')
         if 'SUMMARY' in text:
             if os.getenv('GITHUB_STEP_SUMMARY'):
                 write_summary('\n', text)
@@ -91,6 +94,10 @@ class GithubASan:
         if 'irect leak of ' in text and os.getenv('GITHUB_STEP_SUMMARY'):  # Direct or Indirect leak
             write_summary('* ', text)  # this text is colored
         return text
+
+    @classmethod
+    def set_test_script(cls, test_script):
+        cls.test_script = test_script
 
 
 class FileToPrint:
@@ -393,6 +400,7 @@ class WidelandsTestCase():
     def print_report(self):
         print(f'{colorize(self.result, self.get_result_color())}: {self.test_script}\n')
         print(self.report_header)
+        GithubASan.set_test_script(self.test_script)
         for stdout_fn in self.outputs:
             title = os.path.basename(getattr(stdout_fn, 'file_path', 'output'))\
                 .replace('_00', '').replace('.txt', '')
