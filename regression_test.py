@@ -69,26 +69,28 @@ def colorize_log(text):
     return text
 
 
-def github_asan_line(text):
-    "annotates asan summary on GitHub and writes more info to the steps summary file"
-    # GitHub only supports 10 error and 10 warning annotations per step. This might be too few.
-    # Therefore only annotate the summary line of ASan and write other info to the steps summary
-    def write_summary(arg1, *args):
-        "write to github summary file"
-        with open(os.getenv('GITHUB_STEP_SUMMARY'), 'a') as summary_file:
-            summary_file.write(arg1)
-            for arg in args:
-                summary_file.write(arg)
+class GithubASan:
+    @classmethod
+    def github_asan_line(cls, text):
+        "annotates asan summary on GitHub and writes more info to the steps summary file"
+        # GitHub only supports 10 error and 10 warning annotations per step. This might be too few.
+        # Therefore only annotate the summary line of ASan and write other info to the steps summary
+        def write_summary(arg1, *args):
+            "write to github summary file"
+            with open(os.getenv('GITHUB_STEP_SUMMARY'), 'a') as summary_file:
+                summary_file.write(arg1)
+                for arg in args:
+                    summary_file.write(arg)
 
-    if 'ERROR: ' in text and os.getenv('GITHUB_STEP_SUMMARY'):
-        write_summary('### ', text)  # this text is colored
-    if 'SUMMARY' in text:
-        if os.getenv('GITHUB_STEP_SUMMARY'):
-            write_summary('\n', text)
-        return '::warning title=ASan error::' + text
-    if 'irect leak of ' in text and os.getenv('GITHUB_STEP_SUMMARY'):  # Direct or Indirect leak
-        write_summary('* ', text)  # this text is colored
-    return text
+        if 'ERROR: ' in text and os.getenv('GITHUB_STEP_SUMMARY'):
+            write_summary('### ', text)  # this text is colored
+        if 'SUMMARY' in text:
+            if os.getenv('GITHUB_STEP_SUMMARY'):
+                write_summary('\n', text)
+            return '::warning title=ASan error::' + text
+        if 'irect leak of ' in text and os.getenv('GITHUB_STEP_SUMMARY'):  # Direct or Indirect leak
+            write_summary('* ', text)  # this text is colored
+        return text
 
 
 class FileToPrint:
@@ -343,7 +345,7 @@ class WidelandsTestCase():
                 lsan_log_txt = file.read()
             if "ERROR: " in lsan_log_txt:
                 if os.getenv('GITHUB_ACTION'):
-                    self.outputs.append(FileToPrint(f_name, github_asan_line))
+                    self.outputs.append(FileToPrint(f_name, GithubASan.github_asan_line))
                 elif os.getenv('WLRT_SHOW_ASAN'):
                     self.outputs.append(FileToPrint(f_name))
                 else:
