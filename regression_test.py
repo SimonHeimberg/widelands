@@ -70,6 +70,7 @@ def colorize_log(text):
 
 
 class GithubASan:
+    found_local_tb = True
     test_script = None
 
     @classmethod
@@ -93,6 +94,12 @@ class GithubASan:
             return '::warning title=ASan error::' + text
         if 'irect leak of ' in text and os.getenv('GITHUB_STEP_SUMMARY'):  # Direct or Indirect leak
             write_summary('* ', text)  # this text is colored
+            cls.found_local_tb = False
+        if not cls.found_local_tb and '/widelands/src/' in text and '/third_party/' not in text:
+            if os.getenv('GITHUB_STEP_SUMMARY'):
+                write_summary('    our origin: ', text)
+            cls.found_local_tb = True
+            return f'::notice title=memory leak origin::{text}'
         return text
 
     @classmethod
