@@ -103,9 +103,9 @@ class GithubASan:
             write_summary('* ', remove_ansi_escape_sequences(
                 text.replace(' allocated from:', '', 1)))
             cls.found_local_tb = False
-        compile_d = os.getenv('WLRT_COMPILE_DIR', 'widelands/widelands')  # default is for GitHub
+        compile_d = os.getenv('WLRT_COMPILE_DIR', 'widelands')  # default is for GitHub
         if not cls.found_local_tb and '/third_party/' not in text and \
-                (f'/{compile_d}/' in text or ' src/' in text):
+                (f'/{compile_d}/src/' in text or ' src/' in text):
             if os.getenv('GITHUB_STEP_SUMMARY'):
                 write_summary('    our origin: ', text)
             cls.found_local_tb = True
@@ -113,8 +113,6 @@ class GithubASan:
                 f_name_line = 'src/' + text.rsplit(' src/', 1)[1]
             else:
                 f_name_line = text.rsplit(f'/{compile_d}/', 1)[1]
-            if f_name_line.startswith('build/'):  # some compilers on GH have build/ before
-                f_name_line = f_name_line.replace('build/', '', 1)
             if os.getenv('WLRT_ANNOTATE_LINE'):  # with strategy.job-index == 0 from workflow
                 # annotate only one test job to not have many dublicate messages on one line
                 # unfortunately the jobs can not coordinate
