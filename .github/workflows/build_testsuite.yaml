@@ -84,13 +84,13 @@ jobs:
         while [ $(( i++ )) -lt 60 ]
         do
           sleep 1
-          if xset q 2>/dev/null >/dev/null # ask some config
-          then
+          if glxinfo 2>/dev/null >/dev/null || [ $? -eq 127 ]
+          then  # successful or command not found
             break
           fi
         done
         sleep 5 # some extra time
-        xset q >/dev/null # report error if it is still there
+        glxinfo >/dev/null # report error if it is still there
     - name: Website Binaries
       run: |
         # Ignore transient SDL errors (exit code 2)
