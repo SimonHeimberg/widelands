@@ -26,5 +26,4 @@ fi
 sudo apt-get update
 
 # This script handles the common dependencies
-./install-dependencies.sh debian -y ${ADD_PKG_LIST}
-
+./install-dependencies.sh debian -y ${ADD_PKG_LIST} "$@"
