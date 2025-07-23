@@ -64,22 +64,40 @@ jobs:
           export CXX="/usr/bin/${{ matrix.compiler }}" # g++-10
           export CC="${CXX/g++/gcc}"                   # gcc-10
         fi
+        if ${{ contains(fromJSON('[1,4,7,10,13]'), strategy.job-index) }}
+        then  # build with ninja
+          export CMAKE_GENERATOR=Ninja  # set generator for cmake
+          KEEP_GOING_ARG='0'  # for -k0
+        fi
         mkdir build
         pushd build
         cmake .. -DCMAKE_BUILD_TYPE:STRING="${{ matrix.config }}" -DOPTION_BUILD_WEBSITE_TOOLS="ON" -DOPTION_ASAN="ON" -DOPTION_BUILD_CODECHECK="OFF"
         grep -v REVDETECT-BROKEN VERSION
-        make -k -j$(nproc) VERBOSE=1
+        VERBOSE=1 cmake --build . -j$(nproc) -- "-k$KEEP_GOING_ARG"
     - name: Make install/uninstall
       run: |
         cd build
         TEST_INSTALL_DIR="${PWD}/test_install"
-        make -j$(nproc) DESTDIR=${TEST_INSTALL_DIR} install
-        make -j$(nproc) DESTDIR=${TEST_INSTALL_DIR} uninstall
+        DESTDIR=${TEST_INSTALL_DIR} cmake --build . --target install -j$(nproc)
+        DESTDIR=${TEST_INSTALL_DIR} cmake --build . --target uninstall -j$(nproc)
         test ! -d ${TEST_INSTALL_DIR}
-    - name: Website Binaries
+    - name: Start xvfb
       run: |
         /sbin/start-stop-daemon --start --pidfile /tmp/custom_xvfb_99.pid --make-pidfile --background --exec /usr/bin/Xvfb -- :99 -screen 0 800x600x24 -ac +extension GLX
-        sleep 1m
+        # wait for start of xvfb:
+        i=0
+        while [ $(( i++ )) -lt 60 ]
+        do
+          sleep 1
+          if glxinfo 2>/dev/null >/dev/null || [ $? -eq 127 ]
+          then  # successful or command not found
+            break
+          fi
+        done
+        sleep 2 # some extra time
+        glxinfo >/dev/null # report error if it is still occures
+    - name: Website Binaries
+      run: |
         # Ignore transient SDL errors (exit code 2)
         mkdir temp_web
         build/src/website/wl_map_object_info temp_web || [ $? -eq 2 ]
