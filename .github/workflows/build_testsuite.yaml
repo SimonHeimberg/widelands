@@ -89,8 +89,8 @@ jobs:
             break
           fi
         done
-        sleep 5 # some extra time
-        glxinfo >/dev/null # report error if it is still there
+        sleep 2 # some extra time
+        glxinfo >/dev/null # report error if it is still occures
     - name: Website Binaries
       run: |
         # Ignore transient SDL errors (exit code 2)
