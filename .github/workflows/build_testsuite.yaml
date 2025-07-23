@@ -78,8 +78,8 @@ jobs:
       run: |
         cd build
         TEST_INSTALL_DIR="${PWD}/test_install"
-        DESTDIR=${TEST_INSTALL_DIR} cmake --build build/ --target install -j$(nproc)
-        DESTDIR=${TEST_INSTALL_DIR} cmake --build build/ --target uninstall -j$(nproc)
+        DESTDIR=${TEST_INSTALL_DIR} cmake --build . --target install -j$(nproc)
+        DESTDIR=${TEST_INSTALL_DIR} cmake --build . --target uninstall -j$(nproc)
         test ! -d ${TEST_INSTALL_DIR}
     - name: Start xvfb
       run: |
