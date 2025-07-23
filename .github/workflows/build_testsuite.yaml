@@ -53,7 +53,11 @@ jobs:
       with:
         fetch-depth: 1
     - name: Installing dependencies
-      run: sh ./.github/scripts/install_deps.sh
+      env:
+        # some jobs build with ninja
+        ADD_PKG: |
+          ${{ contains(fromJSON('[1,4,7,10,13]'), strategy.job-index) && 'ninja-build' || '' }}
+      run: sh ./.github/scripts/install_deps.sh $ADD_PKG
     - name: Compile
       run: |
         if [ "${CXX:0:1}" == "c" ]
@@ -64,17 +68,22 @@ jobs:
           export CXX="/usr/bin/${{ matrix.compiler }}" # g++-10
           export CC="${CXX/g++/gcc}"                   # gcc-10
         fi
+        if hash ninja 2>/dev/null
+        then
+          export CMAKE_GENERATOR=Nina  # set generator for cmake
+          KEEP_GOING_ARG='=0'  # -k=0
+        fi
         mkdir build
         pushd build
         cmake .. -DCMAKE_BUILD_TYPE:STRING="${{ matrix.config }}" -DOPTION_BUILD_WEBSITE_TOOLS="ON" -DOPTION_ASAN="ON" -DOPTION_BUILD_CODECHECK="OFF"
         grep -v REVDETECT-BROKEN VERSION
-        make -k -j$(nproc) VERBOSE=1
+        VERBOSE=1 cmake --build . -j$(nproc) -- "-k$KEEP_GOING_ARG"
     - name: Make install/uninstall
       run: |
         cd build
         TEST_INSTALL_DIR="${PWD}/test_install"
-        make -j$(nproc) DESTDIR=${TEST_INSTALL_DIR} install
-        make -j$(nproc) DESTDIR=${TEST_INSTALL_DIR} uninstall
+        DESTDIR=${TEST_INSTALL_DIR} cmake --build build/ --target install -j$(nproc)
+        DESTDIR=${TEST_INSTALL_DIR} cmake --build build/ --target uninstall -j$(nproc)
         test ! -d ${TEST_INSTALL_DIR}
     - name: Start xvfb
       run: |
