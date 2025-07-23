@@ -66,10 +66,8 @@ jobs:
         fi
         if ${{ contains(fromJSON('[1,4,7,10,13]'), strategy.job-index) }}
         then  # build with ninja
-          type -p ninja
-          ninja --version
           export CMAKE_GENERATOR=Ninja  # set generator for cmake
-          KEEP_GOING_ARG='=0'  # for -k=0
+          KEEP_GOING_ARG='0'  # for -k0
         fi
         mkdir build
         pushd build
