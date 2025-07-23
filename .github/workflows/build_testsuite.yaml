@@ -53,11 +53,7 @@ jobs:
       with:
         fetch-depth: 1
     - name: Installing dependencies
-      env:
-        # some jobs build with ninja
-        ADD_PKG: |
-          ${{ contains(fromJSON('[1,4,7,10,13]'), strategy.job-index) && 'ninja-build' || '' }}
-      run: sh ./.github/scripts/install_deps.sh $ADD_PKG
+      run: sh ./.github/scripts/install_deps.sh
     - name: Compile
       run: |
         if [ "${CXX:0:1}" == "c" ]
@@ -68,10 +64,12 @@ jobs:
           export CXX="/usr/bin/${{ matrix.compiler }}" # g++-10
           export CC="${CXX/g++/gcc}"                   # gcc-10
         fi
-        if hash ninja 2>/dev/null
-        then
-          export CMAKE_GENERATOR=Nina  # set generator for cmake
-          KEEP_GOING_ARG='=0'  # -k=0
+        if ${{ contains(fromJSON('[1,4,7,10,13]'), strategy.job-index) }}
+        then  # build with ninja
+          type -p ninja
+          ninja --version
+          export CMAKE_GENERATOR=Ninja  # set generator for cmake
+          KEEP_GOING_ARG='=0'  # for -k=0
         fi
         mkdir build
         pushd build
