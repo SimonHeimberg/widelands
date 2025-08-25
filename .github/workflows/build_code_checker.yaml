@@ -17,8 +17,9 @@ jobs:
         with:
           filters: |
             sources:
-              - src/**.cpp
+              - src/**.cc
               - src/**.c
+              - src/**.cpp
               - src/**.h
               - src/**.hpp
             headers:
