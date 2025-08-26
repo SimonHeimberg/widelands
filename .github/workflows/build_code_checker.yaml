@@ -31,7 +31,7 @@ jobs:
         if: steps.changed_files.outputs.sources == 'true'
         run: |
           sh .github/scripts/install_deps.sh ## clang-tidy-18 # depends on all the rest, without version takes the new one
-          sudo apt-get install --no-recommends clang-tidy-18  # tmp, should be done aboove
+          sudo apt-get install --no-install-recommends clang-tidy-18  # tmp, should be done aboove
 
       - name: Set up Python
         if: steps.changed_files.outputs.sources == 'true'
