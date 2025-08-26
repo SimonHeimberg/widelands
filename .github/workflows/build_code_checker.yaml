@@ -17,14 +17,14 @@ jobs:
         with:
           filters: |
             sources:
-              - src/**.cc
-              - src/**.c
-              - src/**.cpp
-              - src/**.h
-              - src/**.hpp
+              - src/**/*.cc
+              - src/**/*.c
+              - src/**/*.cpp
+              - src/**/*.h
+              - src/**/*.hpp
             headers:
-              - src/**.h
-              - src/**.hpp
+              - src/**/*.h
+              - src/**/*.hpp
           list-files: shell  # list of files as output
 
       - name: Installing dependencies
