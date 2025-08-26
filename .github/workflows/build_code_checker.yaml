@@ -30,7 +30,7 @@ jobs:
       - name: Installing dependencies
         if: steps.changed_files.outputs.sources == 'true'
         run: |
-          .github/scripts/install_deps.sh ## clang-tidy-18 # depends on all the rest, without version takes the new one
+          sh .github/scripts/install_deps.sh ## clang-tidy-18 # depends on all the rest, without version takes the new one
           apt install clang-tidy-18
 
       - name: install codechecker
