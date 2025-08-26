@@ -31,14 +31,20 @@ jobs:
         if: steps.changed_files.outputs.sources == 'true'
         run: |
           sh .github/scripts/install_deps.sh ## clang-tidy-18 # depends on all the rest, without version takes the new one
-          apt install clang-tidy-18
+          sudo apt-get install --no-recommends clang-tidy-18  # tmp, should be done aboove
+
+      - name: Set up Python
+        if: steps.changed_files.outputs.sources == 'true'
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+        # for pip
 
       - name: install codechecker
         if: steps.changed_files.outputs.sources == 'true'
         run: |
-          pip3 install codechecker
+          python3 -m pip install codechecker
 
-      # Prepare a build
       - name: Prepare build
         if: steps.changed_files.outputs.sources == 'true'
         run: |
@@ -55,7 +61,10 @@ jobs:
         if: steps.changed_files.outputs.sources == 'true'
         run: |
           echo '${{ steps.changed_files.outputs.sources_files }}' | xargs -n 1 |
-            sed -e s/^/+/ -e '$''a-*' > skip.list
+            sed -e s/^/+*/ -e '$''a-*' > skip.list
+          echo ::group:: skip.list
+          head -n 32 skip.list
+          echo ::endgroup::
 
       - name: analyze changed source files
         if: steps.changed_files.outputs.sources == 'true'
