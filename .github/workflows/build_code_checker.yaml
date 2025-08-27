@@ -54,7 +54,11 @@ jobs:
 
       - name: code checker info
         if: steps.changed_files.outputs.sources == 'true'
-        run: CodeChecker analyzers --detail
+        run: |
+          echo '## analyzers'
+          CodeChecker analyzers --detail
+          echo '## checkers'
+          CodeChecker checkers
 
       # TODO files should be extended if headers changed
       - name: skip list to only check changed files
@@ -76,11 +80,15 @@ jobs:
             echo "::info::CodeChecker quit with $exit_code. Some of the analysis actions failed."
           fi
 
-      - name: DBG report dir size
+      - name: report info like dir size and enabled checks
         if: steps.changed_files.outputs.sources == 'true'
         run: |
+          echo '## disk usage'
           ls -lh ./reports
           du --human-readable --max-depth=1 ./reports || true
+          echo ::group::enabled checkers
+          cat reports/metadata.json
+          echo ::endgroup
         continue-on-error: true  # is only for debugging
 
       - name: parse
