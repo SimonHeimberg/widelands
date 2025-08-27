@@ -74,7 +74,9 @@ jobs:
         if: steps.changed_files.outputs.sources == 'true'
         run: |
           CodeChecker analyze build/compile_commands.json --output ./reports --jobs "$(nproc)" \
-              --ignore skip.list || exit_code=$?
+              --ignore skip.list --enable sensitive \
+              --analyzer-config 'clang-tidy:take-config-from-directory=true' ||
+            exit_code=$?
           if [ -n "$exit_code" ]
           then
             echo "::info::CodeChecker quit with $exit_code. Some of the analysis actions failed."
