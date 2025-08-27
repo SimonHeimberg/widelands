@@ -95,6 +95,11 @@ jobs:
       clang_tidy: ${{ needs.changes.outputs.clang_tidy }}
       codecheck: ${{ needs.changes.outputs.codecheck }}
 
+  code_checker:
+    needs: [changes]
+    if: needs.changes.outputs.codecheck == 'true'
+    uses: ./.github/workflows/build_code_checker.yaml
+
   testsuite:
     needs: [changes, pre-build_checks]
     if: needs.changes.outputs.run_test_suite == 'true'

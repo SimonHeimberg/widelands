@@ -1,0 +1,108 @@
+name: build - CodeChecker
+on:
+  workflow_call:
+
+jobs:
+  code_checker:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: cpp code changes
+        uses: dorny/paths-filter@v3
+        id: changed_files
+        with:
+          filters: |
+            sources:
+              - src/**/*.cc
+              - src/**/*.c
+              - src/**/*.cpp
+              - src/**/*.h
+              - src/**/*.hpp
+            headers:
+              - src/**/*.h
+              - src/**/*.hpp
+          list-files: shell  # list of files as output
+
+      - name: Installing dependencies
+        if: steps.changed_files.outputs.sources == 'true'
+        run: |
+          sh .github/scripts/install_deps.sh ## clang-tidy-18 # depends on all the rest, without version takes the new one
+          sudo apt-get install --no-install-recommends clang-tidy-18  # tmp, should be done aboove
+
+      - name: Set up Python
+        if: steps.changed_files.outputs.sources == 'true'
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+        # for pip
+
+      - name: install codechecker
+        if: steps.changed_files.outputs.sources == 'true'
+        run: |
+          python3 -m pip install codechecker
+
+      - name: Prepare build
+        if: steps.changed_files.outputs.sources == 'true'
+        run: |
+          mkdir build
+          cd build
+          cmake .. -DCMAKE_BUILD_TYPE=Debug -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+
+      - name: code checker info
+        if: steps.changed_files.outputs.sources == 'true'
+        run: |
+          echo '## analyzers'
+          CodeChecker analyzers --detail
+          echo '## checkers'
+          CodeChecker checkers
+
+      # TODO files should be extended if headers changed
+      - name: skip list to only check changed files
+        if: steps.changed_files.outputs.sources == 'true'
+        run: |
+          echo '${{ steps.changed_files.outputs.sources_files }}' | xargs -n 1 |
+            sed -e s/^/+*/ -e '$''a-*' > skip.list
+          echo ::group:: skip.list
+          head -n 32 skip.list
+          echo ::endgroup::
+
+      - name: analyze changed source files
+        if: steps.changed_files.outputs.sources == 'true'
+        run: |
+          CodeChecker analyze build/compile_commands.json --output ./reports --jobs "$(nproc)" \
+              --ignore skip.list --enable sensitive \
+              --analyzer-config 'clang-tidy:take-config-from-directory=true' ||
+            exit_code=$?
+          if [ -n "$exit_code" ]
+          then
+            echo "::info::CodeChecker quit with $exit_code. Some of the analysis actions failed."
+          fi
+
+      - name: report info like dir size and enabled checks
+        if: steps.changed_files.outputs.sources == 'true'
+        run: |
+          echo '## disk usage'
+          ls -lh ./reports
+          du --human-readable --max-depth=1 ./reports || true
+          echo ::group::enabled checkers
+          cat reports/metadata.json
+          echo ::endgroup
+        continue-on-error: true  # is only for debugging
+
+      - name: parse
+        if: steps.changed_files.outputs.sources == 'true'
+        run: |
+          CodeChecker parse ./reports
+        continue-on-error: true  # just warn
+
+      ## Run the analysis
+      #- uses: whisperity/codechecker-analysis-action@v1
+      #  id: codechecker
+      #  with:
+      #    llvvm-version: ignore  # use installed
+
+      # maybe upload xxx artifact
