@@ -89,6 +89,6 @@ function check_win_condition(winners)
     -- Schedule check
     mapview:add_plugin_timer("check_game_ended()", check_interval, false)
 
-    game.desired_speed = 100000
+    game.desired_speed = 20 * 1000
   end)
 end
